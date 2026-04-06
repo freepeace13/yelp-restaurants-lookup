@@ -22,15 +22,42 @@ function parseStrictFiltering(req) {
   return undefined;
 }
 
+/** @returns {{ ok: true, value: number | undefined } | { ok: false, error: string }} */
+function parseRadiusMeters(req) {
+  const q = req.query.radiusMeters;
+  if (q === undefined || q === "") {
+    return { ok: true, value: undefined };
+  }
+  const n = Number(q);
+  if (!Number.isFinite(n)) {
+    return { ok: false, error: "radiusMeters must be a number" };
+  }
+  const rounded = Math.round(n);
+  if (rounded < 1 || rounded > 40000) {
+    return {
+      ok: false,
+      error: "radiusMeters must be between 1 and 40000 (Yelp API limits)",
+    };
+  }
+  return { ok: true, value: rounded };
+}
+
 app.get("/api/restaurants", async (req, res) => {
   const { city } = req.query;
   if (!city) {
     return res.status(400).json({ error: 'City is required' });
   }
+  const radiusParsed = parseRadiusMeters(req);
+  if (!radiusParsed.ok) {
+    return res.status(400).json({ error: radiusParsed.error });
+  }
   try {
     const strictFiltering = parseStrictFiltering(req);
     const restaurants = await listCityRestaurants(city, {
       ...(strictFiltering !== undefined ? { strictFiltering } : {}),
+      ...(radiusParsed.value !== undefined
+        ? { radiusMeters: radiusParsed.value }
+        : {}),
     });
     res.json(restaurants);
   } catch (error) {

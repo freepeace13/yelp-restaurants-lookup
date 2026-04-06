@@ -33,8 +33,28 @@ import { buildLocationRelevance, FIVE_MILES_METERS } from "../utils/geoDistance.
  * city center exceeds the configured radius (same meters as the Yelp search radius).
  */
 
-/** Yelp `radius` uses meters (max 40000 m). Kept in sync with {@link FIVE_MILES_METERS}. */
-const YELP_RADIUS_METERS = FIVE_MILES_METERS;
+/** Yelp Fusion `radius` bounds (meters). */
+const YELP_MIN_RADIUS_METERS = 1;
+const YELP_MAX_RADIUS_METERS = 40000;
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+function normalizeSearchRadiusMeters(value) {
+    if (value === undefined || value === null) {
+        return FIVE_MILES_METERS;
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+        return FIVE_MILES_METERS;
+    }
+    const rounded = Math.round(n);
+    return Math.min(
+        YELP_MAX_RADIUS_METERS,
+        Math.max(YELP_MIN_RADIUS_METERS, rounded),
+    );
+}
 
 function envStrictFilteringDefault() {
     return (
@@ -48,18 +68,20 @@ const getYelpClient = () => yelp.client(process.env.YELP_API_KEY);
 
 /**
  * @param {string} city
- * @param {{ strictFiltering?: boolean }} [options]
+ * @param {{ strictFiltering?: boolean, radiusMeters?: number }} [options]
  * If `strictFiltering` is omitted, uses `STRICT_FILTERING` from the environment.
+ * If `radiusMeters` is omitted, uses {@link FIVE_MILES_METERS}.
  */
 export const listCityRestaurants = async (city, options = {}) => {
     const strictFiltering =
         typeof options.strictFiltering === 'boolean'
             ? options.strictFiltering
             : envStrictFilteringDefault();
+    const radiusMeters = normalizeSearchRadiusMeters(options.radiusMeters);
     const [searchResponse, cityCenter] = await Promise.all([
         getYelpClient().search({
             term: "restaurant",
-            radius: YELP_RADIUS_METERS,
+            radius: radiusMeters,
             location: city,
         }),
         geocodeCityCenter(city),
@@ -70,7 +92,7 @@ export const listCityRestaurants = async (city, options = {}) => {
             b.coordinates?.latitude,
             b.coordinates?.longitude,
             cityCenter,
-            FIVE_MILES_METERS,
+            radiusMeters,
         );
         return new Restaurant(b, { locationRelevance });
     });
