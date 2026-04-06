@@ -1,5 +1,5 @@
 import yelp from "yelp-fusion";
-import { Restaurant } from "../DTOs/Restaurant.js";
+import { Restaurant } from "../dtos/Restaurant.js";
 import { geocodeCityCenter } from "./CityGeocode.js";
 import { buildLocationRelevance, FIVE_MILES_METERS } from "../utils/geoDistance.js";
 

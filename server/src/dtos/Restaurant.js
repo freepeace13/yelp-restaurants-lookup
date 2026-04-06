@@ -1,6 +1,6 @@
-import { Address } from '../ValueObjects/Address.js';
-import { Coordinate } from '../ValueObjects/Coordinates.js';
-import { Rating } from '../ValueObjects/Rating.js';
+import { Address } from "../valueobjects/Address.js";
+import { Coordinate } from "../valueobjects/Coordinates.js";
+import { Rating } from "../valueobjects/Rating.js";
 
 function fromYelpBusiness(business) {
     const loc = business.location ?? {};
