@@ -1,7 +1,7 @@
 export type LocationRelevance = {
   assessed: boolean;
   distanceMiles: number | null;
-  withinFiveMiles: boolean | null;
+  withinSearchRadius: boolean | null;
 };
 
 export type RestaurantJson = {

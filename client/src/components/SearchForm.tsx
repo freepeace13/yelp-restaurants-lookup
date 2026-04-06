@@ -1,11 +1,13 @@
 import type { FormEvent } from "react";
+import type { CityValue } from "../types/city";
+import { CityAutocomplete } from "./CityAutocomplete";
 import { MAX_RADIUS_MILES, MIN_RADIUS_MILES } from "../utils/radius";
 
 type SearchFormProps = {
-  city: string;
+  city: CityValue | null;
   radiusMiles: number;
   loading: boolean;
-  onCityChange: (value: string) => void;
+  onCityChange: (value: CityValue | null) => void;
   onRadiusMilesChange: (value: number) => void;
   onSearch: (e: FormEvent) => void;
 };
@@ -27,13 +29,11 @@ export function SearchForm({
         <label className="text-xs font-medium text-slate-400" htmlFor="city">
           City
         </label>
-        <input
+        <CityAutocomplete
           id="city"
-          type="text"
           value={city}
-          onChange={(e) => onCityChange(e.target.value)}
-          placeholder="e.g. Austin, TX"
-          className="min-w-0 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none ring-emerald-500/0 transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/30"
+          onChange={onCityChange}
+          disabled={loading}
           autoComplete="address-level2"
         />
       </div>

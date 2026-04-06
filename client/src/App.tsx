@@ -8,6 +8,7 @@ import { SearchStatusMessage } from "./components/SearchStatusMessage";
 import { useDefaultCity } from "./hooks/useDefaultCity";
 import { useRestaurantSearch } from "./hooks/useRestaurantSearch";
 import { useStrictFilteringPreference } from "./hooks/useStrictFilteringPreference";
+import type { CityValue } from "./types/city";
 import {
   DEFAULT_RADIUS_MILES,
   MAX_RADIUS_MILES,
@@ -35,7 +36,7 @@ export default function App() {
     void search(city, milesToMeters(miles));
   }
 
-  function onCityChange(value: string) {
+  function onCityChange(value: CityValue | null) {
     markCityEditedByUser();
     setCity(value);
   }

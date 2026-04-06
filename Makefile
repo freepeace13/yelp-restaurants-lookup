@@ -18,13 +18,7 @@ install:
 	npm install
 
 env:
-	@if [ -f server/.env ]; then \
-		echo "server/.env already exists; not overwriting."; \
-	else \
-		cp server/.env.example server/.env; \
-		echo "Created server/.env from server/.env.example"; \
-		echo "Edit server/.env and set YELP_API_KEY (and PORT if needed)."; \
-	fi
+	node scripts/setup-env.mjs
 
 setup: install env
 	@echo ""

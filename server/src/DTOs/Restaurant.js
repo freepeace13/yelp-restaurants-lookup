@@ -46,7 +46,7 @@ export class Restaurant {
         this.locationRelevance = options.locationRelevance ?? {
             assessed: false,
             distanceMiles: null,
-            withinFiveMiles: null,
+            withinSearchRadius: null,
         };
     }
 

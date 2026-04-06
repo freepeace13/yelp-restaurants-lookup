@@ -1,176 +1,140 @@
 # Restaurants Lookup (Yelp)
 
-A small full-stack JavaScript project for searching restaurants by city using the Yelp Fusion API. The repository is structured as an **npm workspaces** monorepo with a **React** single-page app and a **Node/Express** API.
+Live Yelp data with Nominatim-resolved city centers, Haversine-backed relevance metadata, optional strict radius filtering, and a clear UI for listings Yelp returns outside the requested radius.
 
 ---
 
-## Architecture summary
+## System requirements
 
-### High-level design
+| | **Minimum** |
+|---|-------------|
+| **Node.js** | 20 or newer (LTS recommended) |
+| **npm** | Comes with Node.js |
+| **Git** | For cloning and updates |
+| **Network** | Internet access for Yelp, maps/geocoding, and package installs |
+| **Browser** | A current Chrome, Firefox, Edge, or Safari |
 
-The application follows a classic **browser client → backend API → external Yelp API** pattern:
+**Windows:** Windows 10 or 11. Automated setup uses [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) (install **App Installer** from the Microsoft Store if `winget` is missing).
 
-1. **Web client (`client/`)** — A React app built with Vite. It renders the UI (city input, results list) and calls **same-origin** HTTP routes under `/api/*` during development.
-2. **API server (`server/`)** — An Express application that holds secrets (for example the Yelp API key in environment variables), implements REST endpoints, and forwards or shapes requests to Yelp. This keeps the Fusion API key off the client.
-3. **Yelp Fusion API** — External HTTPS service used for live restaurant data (no mock data in production flows).
+**Linux:** A normal desktop or server distro with `bash` and either `curl` or `wget`. Package installs may prompt for your **sudo** password.
 
-### Monorepo layout
+**Optional:** [GNU Make](https://www.gnu.org/software/make/) — the repo includes a `Makefile` that mirrors common `npm` commands. If you do not have Make, use the `npm run` commands shown below.
 
-| Workspace | Technology | Responsibility |
-|-----------|------------|----------------|
-| **Root** | npm workspaces + `concurrently` | Installs shared tooling; runs client and server together with `npm run dev`. |
-| **`client/`** | Vite 6, React 19, TypeScript, Tailwind CSS v4, ESLint | Static assets and UI; dev server with hot reload. |
-| **`server/`** | Express (ES modules), `cors`, `dotenv`, ESLint | JSON API, Yelp proxying, environment-based configuration. |
-
-### Development networking
-
-- **Client dev server:** `http://localhost:5173` (Vite default in this project).
-- **API server:** `http://localhost:3001` by default (`PORT` in `server/.env`).
-
-Vite is configured to **proxy** requests from the browser that start with `/api` to the backend (`vite.config.ts`). That way the React app can use relative URLs such as `/api/health` without browser CORS issues, while the Express app continues to listen on its own port.
-
-```text
-Browser  →  GET /api/...  →  Vite (5173)  →  proxy  →  Express (3001)
-```
-
-For production, you would typically serve the built client (`client/dist`) behind a static host or the same reverse proxy as the API, and configure the client’s API base URL or proxy rules accordingly.
-
-### Request flow (target end state)
-
-Once Yelp routes are implemented on the server:
-
-```text
-User enters city  →  React posts/GETs /api/...  →  Express validates input
-  →  Express calls Yelp Fusion with server-side API key  →  JSON response
-  →  React renders name, rating, address, coordinates
-```
-
-The current server exposes a minimal **`GET /api/health`** endpoint for smoke checks; Yelp-specific routes and query parameters (location, radius, categories) belong in `server/src/` as you extend the app.
+**Windows + Linux-style tools:** [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install) works well; use the **Linux** instructions inside your WSL terminal.
 
 ---
 
-## System and software requirements
+## Setup guide
 
-### Required
+### 1. Installation
 
-- **Node.js** — **20.x or newer** (LTS recommended). The toolchain uses modern ESM, Vite 6, and current ESLint; older Node versions may fail to install or run.
-- **npm** — **10.x or newer** (bundled with recent Node installers). This project uses **npm workspaces** at the repository root.
+Pick **one** path: **automated** (easiest if you are new) or **manual** (full control).
 
-### Optional but useful
+#### Automated install (Git + Node + clone)
 
-- **Git** — For version control and cloning.
-- A **Yelp Fusion API key** — Required for real restaurant data once you implement Yelp calls on the server. Create or manage keys in the [Yelp developers](https://www.yelp.com/developers) console.
+Use this when you **do not** have the project on your computer yet. The script installs **Git** and **Node.js 20+** when they are missing, then **clones** the repository.
 
-### Platforms
+**Windows (PowerShell)** — run these in the folder where you want the project (for example **Documents**). If Windows asks for permission, allow **winget** to install software.
 
-- **Linux**, **macOS**, and **Windows** (with a normal Node/npm install) are supported for local development.
+```powershell
+$base = "https://raw.githubusercontent.com/freepeace13/yelp-restaurants-lookup/refs/heads/main/scripts"
+Invoke-WebRequest -Uri "$base/bootstrap-windows.ps1" -OutFile bootstrap-windows.ps1 -UseBasicParsing
+powershell -ExecutionPolicy Bypass -File .\bootstrap-windows.ps1 -RepoUrl "https://github.com/freepeace13/yelp-restaurants-lookup.git"
+```
+
+**Linux and macOS (Terminal)**
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/freepeace13/yelp-restaurants-lookup/refs/heads/main/scripts/bootstrap-unix.sh" | bash -s -- "https://github.com/freepeace13/yelp-restaurants-lookup.git"
+```
+
+- **macOS** needs [Homebrew](https://brew.sh) for automatic installs.
+- **Linux** may ask for your **sudo** password to install packages.
+
+After the clone finishes, open a terminal **inside** the new project folder (by default the folder name matches the repo, e.g. `yelp-restaurants-lookup`) and continue with **First-time project setup** below.
+
+#### Manual install
+
+1. Install **Node.js 20+** from [https://nodejs.org](https://nodejs.org) (LTS) and **Git** from [https://git-scm.com](https://git-scm.com) on Windows, or use your package manager on Linux.
+2. Clone the repository and go into the project folder:
+
+```bash
+git clone https://github.com/freepeace13/yelp-restaurants-lookup.git
+cd yelp-restaurants-lookup
+```
+
+3. Continue with **First-time project setup** below.
 
 ---
 
-## Local setup
+### 2. Obtaining Yelp API keys
 
-### 1. Clone and enter the project
+This app uses the **Yelp Fusion** HTTP API. You need a **free developer account** and an **API key** (not OAuth for basic usage).
 
-```bash
-git clone <repository-url>
-cd restaurants-lookup-yelp-api
-```
+1. Open **[Yelp for Developers](https://www.yelp.com/developers)** and sign in (or create a Yelp login).
+2. Go to **Create App** (or **Manage App**) in the developer dashboard.
+3. Create an application; fill in the required fields (name and contact are typical).
+4. After the app is created, copy the **API Key** from the app details page. Treat it like a password — do not commit it to public repositories.
 
-### 2. Install dependencies
+You will paste this key into `server/.env` in the next section as `YELP_API_KEY`.
 
-Install once from the **repository root** so workspaces link correctly:
+---
 
-```bash
-npm install
-```
+### 3. First-time project setup
 
-This installs root dev tools (for example `concurrently`) and dependencies for `client/` and `server/`.
+From the **project root** (the folder that contains `package.json`):
 
-### 3. Configure environment (server)
+**Install dependencies and create the environment file**
 
-Copy the example env file and edit it:
+This runs `npm install` for the workspace (client + server) and creates `server/.env` from `server/.env.example` if `.env` does not already exist (your existing `.env` is never overwritten).
 
 ```bash
-cp server/.env.example server/.env
+npm run setup
 ```
 
-Set at least:
+**With GNU Make** (Linux, macOS, or WSL): `make setup` — run `make help` for a short list of shortcuts.
 
-- **`PORT`** — API port (default `3001` if omitted).
-- **`YELP_API_KEY`** — Your Yelp Fusion API key when you add Yelp integration.
+**Configure the API key**
 
-The server loads variables via `dotenv` from `server/.env` (see `server/src/index.js`).
+1. Open `server/.env` in a text editor.
+2. Set `YELP_API_KEY=` to your key, with **no spaces** around `=`, for example: `YELP_API_KEY=your_key_here`
+3. Optionally change `PORT` if `3001` is already used on your machine. The web app (Vite) defaults to port **5173** unless your setup overrides it.
 
-### 4. Run the app locally
+Save the file before starting the app.
 
-**Run client and API together** (recommended for development):
+---
+
+### 4. Running locally
+
+**Start the client and API together** (recommended for development):
 
 ```bash
 npm run dev
 ```
 
-- Client: **http://localhost:5173**
-- API: **http://localhost:3001**  
-- Health check: **http://localhost:3001/api/health** (or via the Vite proxy: **http://localhost:5173/api/health**)
+Or with Make: `make dev`
 
-**Run workspaces separately** (two terminals):
+Then open **[http://localhost:5173](http://localhost:5173)** in your browser. The API listens on **port 3001** by default (`PORT` in `server/.env`).
 
-```bash
-npm run dev:client
-```
+**Run only one part** (optional):
 
-```bash
-npm run dev:server
-```
+- Client only: `npm run dev:client`
+- Server only: `npm run dev:server`
 
-### 5. Quality checks
-
-```bash
-npm run lint
-```
-
-Build the production client bundle:
-
-```bash
-npm run build
-```
-
-Output is written to `client/dist/`. Serving that folder and running the API in production is deployment-specific (not scripted here by default).
+**Developers:** the repo is an **npm workspace** (React + Vite client, Express API). Root scripts in `package.json` orchestrate both packages. The `Makefile` mirrors common tasks for environments where Make is available.
 
 ---
 
-## NPM scripts (reference)
+### 5. Troubleshooting
 
-| Script | Description |
+| Problem | What to try |
 |--------|-------------|
-| `npm run dev` | Starts Vite (client) and Express (server) concurrently. |
-| `npm run dev:client` | Client only — Vite dev server. |
-| `npm run dev:server` | Server only — Express with `node --watch`. |
-| `npm run build` | Production build of the React app (`client/dist`). |
-| `npm run lint` | ESLint for `client/` and `server/`. |
+| `node` or `npm` not found | Install Node from [nodejs.org](https://nodejs.org), then **close and reopen** your terminal. From the project folder, run `npm run setup` again. |
+| `winget` not found (Windows) | Install **App Installer** from the Microsoft Store, or install Git and Node manually and clone with Git or download a ZIP from GitHub. |
+| `make` not found | Use `npm run setup` and `npm run dev` instead of `make`. |
+| Port already in use | Change `PORT` in `server/.env`, or stop the other program using that port. If **5173** is busy, stop the other Vite/dev server or adjust the client dev port in Vite config. |
+| Blank page or connection errors | Confirm both processes started (`npm run dev` runs client + server). Check the terminal for errors. |
+| No restaurant results | Verify `YELP_API_KEY` in `server/.env` (no typos, file saved), restart with `npm run dev`. Check Yelp’s dashboard for app status or rate limits. |
+| Permission or `sudo` prompts (Linux) | Expected when the bootstrap script installs system packages; use your login password. If you cannot use `sudo`, install Node and Git yourself and use **Manual install**. |
 
----
-
-## Project structure (overview)
-
-```text
-restaurants-lookup-yelp-api/
-├── package.json          # Workspaces + dev scripts
-├── client/               # React + Vite + Tailwind + ESLint
-│   ├── src/
-│   ├── vite.config.ts    # Dev server + /api proxy
-│   └── eslint.config.js
-├── server/               # Express API + ESLint
-│   ├── src/index.js
-│   ├── .env.example
-│   └── eslint.config.js
-└── README.md
-```
-
----
-
-## Troubleshooting
-
-- **`npm install` errors** — Use Node 20+ and a recent npm; delete `node_modules` and lockfile only if you understand the implications, then reinstall.
-- **Port already in use** — Change Vite’s port in `client/vite.config.ts` or set `PORT` in `server/.env`.
-- **API not reachable from the browser** — Ensure the server is running on the port Vite proxies to (`3001` by default) and that requests use the `/api` prefix so the Vite proxy applies.
+If a command fails, copy the **full error message** from the terminal; it usually names the missing program or port.

@@ -4,33 +4,16 @@ import { geocodeCityCenter } from "./CityGeocode.js";
 import { buildLocationRelevance, FIVE_MILES_METERS } from "../utils/geoDistance.js";
 
 /**
- * TECHNICAL TEST TASK:
- * 1. Build a simple JavaScript web app that: 
- * 2. Uses the Yelp API to fetch restaurants for a given city
- * 3. Has a basic web UI where a user can input a city and see results
- * 4. Displays a clean, accurate list of restaurants
- * 
- * Requirements:
- * 1. Use real Yelp API data (no mock data)
- * 2. Results should be relevant to the city (within city limits or 5-mile radius)
- * 3. Keep the solution simple and clean, avoid overengineering
- * 4. Display: name, rating, address, and coordinates
- * 5. UI can be minimal, but should be functional and easy to use
- * 
- * Submission:
- * 1. Share a live demo link (preferred) or clear instructions to run locally
- * 2. Provide your code (GitHub or file)
- * 3. Include a short explanation (3–5 sentences) of your approach
- * 4. Briefly explain how you handled accuracy and edge cases
- *
  * Search params: `term` (restaurants), `radius` in meters (~5 mi from geocoded city center),
  * and `location` (city string). Yelp treats `radius` as a suggestion: in dense areas the
  * effective radius may be smaller; in sparse areas it may be larger so results stay relevant.
  * We annotate each row with Haversine distance from a geocoded city center so the UI
  * can flag listings outside the 5-mile relevance window (Yelp may still return them).
  *
- * Set `STRICT_FILTERING=true` to drop businesses whose Haversine distance from the geocoded
- * city center exceeds the configured radius (same meters as the Yelp search radius).
+ * When strict filtering is enabled (via the `strictFiltering` API option), businesses whose
+ * Haversine distance from the geocoded city center exceeds the configured radius are dropped
+ * (same meters as the Yelp search radius). The web app passes this; omitting it defaults to
+ * non-strict behavior.
  */
 
 /** Yelp Fusion `radius` bounds (meters). */
@@ -56,35 +39,52 @@ function normalizeSearchRadiusMeters(value) {
     );
 }
 
-function envStrictFilteringDefault() {
-    return (
-        process.env.STRICT_FILTERING === 'true' ||
-        process.env.STRICT_FILTERING === '1'
-    );
-}
-
 /** Yelp Fusion API client (`yelp-fusion`); uses https://api.yelp.com/v3 (see package). */
 const getYelpClient = () => yelp.client(process.env.YELP_API_KEY);
 
 /**
  * @param {string} city
- * @param {{ strictFiltering?: boolean, radiusMeters?: number }} [options]
- * If `strictFiltering` is omitted, uses `STRICT_FILTERING` from the environment.
+ * @param {{ strictFiltering?: boolean, radiusMeters?: number, latitude?: number, longitude?: number }} [options]
+ * If `strictFiltering` is omitted, defaults to false (not strict). Callers should pass
+ * `strictFiltering` from the client (e.g. `/api/restaurants?strictFiltering=true`).
  * If `radiusMeters` is omitted, uses {@link FIVE_MILES_METERS}.
+ * When `latitude` and `longitude` are finite numbers, Yelp search uses them as the center
+ * (and distance filtering uses the same point); otherwise the city string is geocoded.
  */
 export const listCityRestaurants = async (city, options = {}) => {
     const strictFiltering =
         typeof options.strictFiltering === 'boolean'
             ? options.strictFiltering
-            : envStrictFilteringDefault();
+            : false;
     const radiusMeters = normalizeSearchRadiusMeters(options.radiusMeters);
-    const [searchResponse, cityCenter] = await Promise.all([
-        getYelpClient().search({
-            term: "restaurant",
+    const lat = options.latitude;
+    const lon = options.longitude;
+    const explicitCenter =
+        typeof lat === 'number' &&
+            Number.isFinite(lat) &&
+            typeof lon === 'number' &&
+            Number.isFinite(lon)
+            ? { latitude: lat, longitude: lon }
+            : null;
+
+    const yelpSearch = explicitCenter
+        ? {
+            term: 'restaurant',
+            radius: radiusMeters,
+            latitude: explicitCenter.latitude,
+            longitude: explicitCenter.longitude,
+        }
+        : {
+            term: 'restaurant',
             radius: radiusMeters,
             location: city,
-        }),
-        geocodeCityCenter(city),
+        };
+
+    const [searchResponse, cityCenter] = await Promise.all([
+        getYelpClient().search(yelpSearch),
+        explicitCenter
+            ? Promise.resolve(explicitCenter)
+            : geocodeCityCenter(city),
     ]);
     const businesses = searchResponse.jsonBody?.businesses ?? [];
     const restaurants = businesses.map((b) => {
@@ -100,6 +100,6 @@ export const listCityRestaurants = async (city, options = {}) => {
         return restaurants;
     }
     return restaurants.filter(
-        (r) => r.locationRelevance.withinFiveMiles !== false,
+        (r) => r.locationRelevance.withinSearchRadius !== false,
     );
 };

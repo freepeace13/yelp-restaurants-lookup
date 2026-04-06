@@ -4,7 +4,7 @@
  */
 
 /**
- * @typedef {{ assessed: boolean, distanceMiles: number | null, withinFiveMiles: boolean | null }} LocationRelevance
+ * @typedef {{ assessed: boolean, distanceMiles: number | null, withinSearchRadius: boolean | null }} LocationRelevance
  */
 
 /** WGS84 mean Earth radius (meters); common default for Haversine. */
@@ -63,14 +63,14 @@ function toFiniteNumber(n) {
 }
 
 /**
- * Compares a business position to a geocoded city center.
- * "City limits" are approximated by the 5-mile radius (no polygon data in this app).
+ * Compares a business position to the search center (geocoded city or explicit lat/lon).
+ * Whether the business is "within" uses {@link radiusMeters} (defaults to 5 mi when omitted).
  *
  * @param {number | string | null | undefined} businessLat
  * @param {number | string | null | undefined} businessLon
  * @param {{ latitude: number, longitude: number } | null} cityCenter
  * @param {number} [radiusMeters]
- * @returns {{ assessed: boolean, distanceMiles: number | null, withinFiveMiles: boolean | null }}
+ * @returns {{ assessed: boolean, distanceMiles: number | null, withinSearchRadius: boolean | null }}
  */
 export function buildLocationRelevance(
   businessLat,
@@ -87,7 +87,7 @@ export function buildLocationRelevance(
     return {
       assessed: false,
       distanceMiles: null,
-      withinFiveMiles: null,
+      withinSearchRadius: null,
     };
   }
 
@@ -96,6 +96,6 @@ export function buildLocationRelevance(
   return {
     assessed: true,
     distanceMiles: Math.round(miles * 100) / 100,
-    withinFiveMiles: meters <= radiusMeters,
+    withinSearchRadius: meters <= radiusMeters,
   };
 }

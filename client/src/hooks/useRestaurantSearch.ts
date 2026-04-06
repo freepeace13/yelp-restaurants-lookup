@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { RestaurantJson } from "../types/restaurant";
 import { fetchRestaurantsByCity } from "../api/restaurants";
+import type { RestaurantJson } from "../types/restaurant";
+import { citySearchQuery, type CityValue } from "../types/city";
 
 export function useRestaurantSearch(strictFiltering: boolean) {
   const [restaurants, setRestaurants] = useState<RestaurantJson[]>([]);
@@ -10,17 +11,17 @@ export function useRestaurantSearch(strictFiltering: boolean) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
-  const lastCityRef = useRef<string | null>(null);
+  const lastCityRef = useRef<CityValue | null>(null);
   const lastRadiusMetersRef = useRef<number | null>(null);
 
   const search = useCallback(
-    async (city: string, radiusMeters: number) => {
-      const q = city.trim();
+    async (city: CityValue | null, radiusMeters: number) => {
+      const q = city ? citySearchQuery(city).trim() : "";
       if (!q) {
         setError("Enter a city name.");
         return;
       }
-      lastCityRef.current = q;
+      lastCityRef.current = city;
       lastRadiusMetersRef.current = radiusMeters;
       setLoading(true);
       setError(null);
@@ -29,6 +30,7 @@ export function useRestaurantSearch(strictFiltering: boolean) {
           q,
           strictFiltering,
           radiusMeters,
+          city?.coordinates,
         );
         setSearched(true);
         if (!result.ok) {

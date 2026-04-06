@@ -1,23 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { FALLBACK_CITY } from "../utils/constants";
-import { cityFromIp } from "../utils/cityFromIp";
+import type { CityValue } from "../types/city";
+import { cityValueFromIp } from "../utils/cityFromIp";
 import { getCurrentPosition } from "../utils/geolocation";
-import { reverseGeocodeCity } from "../utils/reverseGeocode";
+import { reverseGeocodeCityValue } from "../utils/reverseGeocode";
+import { FALLBACK_CITY_VALUE } from "../utils/constants";
 
 export function useDefaultCity() {
-  const [city, setCity] = useState("");
+  const [city, setCity] = useState<CityValue | null>(null);
   const cityEditedByUser = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function discoverDefaultCity() {
-      let resolved: string | null = null;
+      let resolved: CityValue | null = null;
 
       try {
         const pos = await getCurrentPosition();
         if (cancelled) return;
-        resolved = await reverseGeocodeCity(
+        resolved = await reverseGeocodeCityValue(
           pos.coords.latitude,
           pos.coords.longitude,
         );
@@ -28,12 +29,12 @@ export function useDefaultCity() {
       if (cancelled || cityEditedByUser.current) return;
 
       if (!resolved) {
-        resolved = await cityFromIp();
+        resolved = await cityValueFromIp();
       }
 
       if (cancelled || cityEditedByUser.current) return;
 
-      setCity(resolved ?? FALLBACK_CITY);
+      setCity(resolved ?? FALLBACK_CITY_VALUE);
     }
 
     void discoverDefaultCity();

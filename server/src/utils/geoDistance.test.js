@@ -51,17 +51,17 @@ test("FIVE_MILES_METERS is 5 × 1609.344 m rounded", () => {
 test("buildLocationRelevance: missing coords → not assessed", () => {
   const r = buildLocationRelevance(null, -74, { latitude: 40, longitude: -74 });
   assert.equal(r.assessed, false);
-  assert.equal(r.withinFiveMiles, null);
+  assert.equal(r.withinSearchRadius, null);
 });
 
 test("buildLocationRelevance: point at center → within radius, ~0 mi", () => {
   const r = buildLocationRelevance(40, -74, { latitude: 40, longitude: -74 });
   assert.equal(r.assessed, true);
-  assert.equal(r.withinFiveMiles, true);
+  assert.equal(r.withinSearchRadius, true);
   assert.ok(r.distanceMiles != null && r.distanceMiles < 0.001);
 });
 
-test("buildLocationRelevance: far point → outside 5 mi", () => {
+test("buildLocationRelevance: far point → outside search radius", () => {
   const r = buildLocationRelevance(
     34.05,
     -118.25,
@@ -69,5 +69,5 @@ test("buildLocationRelevance: far point → outside 5 mi", () => {
     FIVE_MILES_METERS,
   );
   assert.equal(r.assessed, true);
-  assert.equal(r.withinFiveMiles, false);
+  assert.equal(r.withinSearchRadius, false);
 });

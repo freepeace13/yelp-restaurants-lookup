@@ -21,13 +21,13 @@ export function RestaurantCard({
         <h2 className="min-w-0 flex-1 text-base font-medium text-white">
           {r.name}
           {r.locationRelevance?.assessed &&
-            r.locationRelevance.withinFiveMiles === false && (
+            r.locationRelevance.withinSearchRadius === false && (
               <span
                 className="ml-2 inline-block rounded border border-amber-700/80 bg-amber-950/80 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-amber-200"
                 title={
                   radiusLabel != null
-                    ? `About ${r.locationRelevance.distanceMiles ?? "?"} mi from geocoded city center (outside ${radiusLabel} mi search radius)`
-                    : `About ${r.locationRelevance.distanceMiles ?? "?"} mi from geocoded city center (outside search radius)`
+                    ? `About ${r.locationRelevance.distanceMiles ?? "?"} mi from search center (outside ${radiusLabel} mi search radius)`
+                    : `About ${r.locationRelevance.distanceMiles ?? "?"} mi from search center (outside search radius)`
                 }
               >
                 {radiusLabel != null

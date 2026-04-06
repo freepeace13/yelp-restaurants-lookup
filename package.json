@@ -6,6 +6,8 @@
     "server"
   ],
   "scripts": {
+    "env": "node scripts/setup-env.mjs",
+    "setup": "npm install && npm run env",
     "dev": "concurrently -n client,server -c blue,green \"npm run dev -w client\" \"npm run dev -w server\"",
     "dev:client": "npm run dev -w client",
     "dev:server": "npm run dev -w server",
