@@ -3,14 +3,18 @@ import { AppHeader } from "./components/AppHeader";
 import { ErrorAlert } from "./components/ErrorAlert";
 import { RestaurantList } from "./components/RestaurantList";
 import { SearchForm } from "./components/SearchForm";
+import { StrictFilteringToggle } from "./components/StrictFilteringToggle";
 import { SearchStatusMessage } from "./components/SearchStatusMessage";
 import { useDefaultCity } from "./hooks/useDefaultCity";
 import { useRestaurantSearch } from "./hooks/useRestaurantSearch";
+import { useStrictFilteringPreference } from "./hooks/useStrictFilteringPreference";
 
 export default function App() {
   const { city, setCity, markCityEditedByUser } = useDefaultCity();
+  const { strictFiltering, setStrictFiltering } =
+    useStrictFilteringPreference();
   const { restaurants, loading, error, searched, search } =
-    useRestaurantSearch();
+    useRestaurantSearch(strictFiltering);
 
   function onSearch(e: FormEvent) {
     e.preventDefault();
@@ -32,6 +36,11 @@ export default function App() {
           loading={loading}
           onCityChange={onCityChange}
           onSearch={onSearch}
+        />
+
+        <StrictFilteringToggle
+          strictFiltering={strictFiltering}
+          onStrictFilteringChange={setStrictFiltering}
         />
 
         {error && <ErrorAlert message={error} />}

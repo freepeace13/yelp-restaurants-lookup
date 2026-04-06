@@ -15,13 +15,23 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+function parseStrictFiltering(req) {
+  const q = req.query.strictFiltering;
+  if (q === "true" || q === "1") return true;
+  if (q === "false" || q === "0") return false;
+  return undefined;
+}
+
 app.get("/api/restaurants", async (req, res) => {
   const { city } = req.query;
   if (!city) {
     return res.status(400).json({ error: 'City is required' });
   }
   try {
-    const restaurants = await listCityRestaurants(city);
+    const strictFiltering = parseStrictFiltering(req);
+    const restaurants = await listCityRestaurants(city, {
+      ...(strictFiltering !== undefined ? { strictFiltering } : {}),
+    });
     res.json(restaurants);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -28,15 +28,34 @@ import { buildLocationRelevance, FIVE_MILES_METERS } from "../utils/geoDistance.
  * effective radius may be smaller; in sparse areas it may be larger so results stay relevant.
  * We annotate each row with Haversine distance from a geocoded city center so the UI
  * can flag listings outside the 5-mile relevance window (Yelp may still return them).
+ *
+ * Set `STRICT_FILTERING=true` to drop businesses whose Haversine distance from the geocoded
+ * city center exceeds the configured radius (same meters as the Yelp search radius).
  */
 
 /** Yelp `radius` uses meters (max 40000 m). Kept in sync with {@link FIVE_MILES_METERS}. */
 const YELP_RADIUS_METERS = FIVE_MILES_METERS;
 
+function envStrictFilteringDefault() {
+    return (
+        process.env.STRICT_FILTERING === 'true' ||
+        process.env.STRICT_FILTERING === '1'
+    );
+}
+
 /** Yelp Fusion API client (`yelp-fusion`); uses https://api.yelp.com/v3 (see package). */
 const getYelpClient = () => yelp.client(process.env.YELP_API_KEY);
 
-export const listCityRestaurants = async (city) => {
+/**
+ * @param {string} city
+ * @param {{ strictFiltering?: boolean }} [options]
+ * If `strictFiltering` is omitted, uses `STRICT_FILTERING` from the environment.
+ */
+export const listCityRestaurants = async (city, options = {}) => {
+    const strictFiltering =
+        typeof options.strictFiltering === 'boolean'
+            ? options.strictFiltering
+            : envStrictFilteringDefault();
     const [searchResponse, cityCenter] = await Promise.all([
         getYelpClient().search({
             term: "restaurant",
@@ -46,7 +65,7 @@ export const listCityRestaurants = async (city) => {
         geocodeCityCenter(city),
     ]);
     const businesses = searchResponse.jsonBody?.businesses ?? [];
-    return businesses.map((b) => {
+    const restaurants = businesses.map((b) => {
         const locationRelevance = buildLocationRelevance(
             b.coordinates?.latitude,
             b.coordinates?.longitude,
@@ -55,4 +74,10 @@ export const listCityRestaurants = async (city) => {
         );
         return new Restaurant(b, { locationRelevance });
     });
+    if (!strictFiltering) {
+        return restaurants;
+    }
+    return restaurants.filter(
+        (r) => r.locationRelevance.withinFiveMiles !== false,
+    );
 };

@@ -6,10 +6,13 @@ export type FetchRestaurantsResult =
 
 export async function fetchRestaurantsByCity(
   city: string,
+  strictFiltering: boolean,
 ): Promise<FetchRestaurantsResult> {
-  const res = await fetch(
-    `/api/restaurants?city=${encodeURIComponent(city)}`,
-  );
+  const params = new URLSearchParams({
+    city,
+    strictFiltering: strictFiltering ? "true" : "false",
+  });
+  const res = await fetch(`/api/restaurants?${params.toString()}`);
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     return {
