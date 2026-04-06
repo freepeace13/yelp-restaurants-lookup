@@ -2,6 +2,8 @@
 
 Live Yelp data with Nominatim-resolved city centers, Haversine-backed relevance metadata, optional strict radius filtering, and a clear UI for listings Yelp returns outside the requested radius.
 
+![City Restaurants — city search, strict filtering, and result cards with ratings and coordinates](docs/app-screenshot.png)
+
 ---
 
 ## System requirements
